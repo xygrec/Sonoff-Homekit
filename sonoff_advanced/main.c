@@ -34,7 +34,6 @@
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 #include <wifi_config.h>
-#include <httpd/httpd.h>
 
 #include "button.h"
 #include "poweronstate.h"
@@ -80,23 +79,23 @@ void led_blink(int times) {
 void reset_configuration_task() {
     //Flash the LED first before we start the reset
     led_blink(3);
-    
+
     printf("Resetting HomeKit Config\n");
-    
+
     homekit_server_reset();
-    
+
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     printf("Resetting Wifi Config\n");
-    
+
     wifi_config_reset();
-    
+
     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    
+
     printf("Restarting\n");
-    
+
     sdk_system_restart();
-    
+
     vTaskDelete(NULL);
 }
 
@@ -166,7 +165,7 @@ void wifi_connection_watchdog_task(void *_args) {
         printf("No Wifi Connection, Restarting\n");
         sdk_system_restart();
     }
-    
+
     vTaskDelete(NULL);
 }
 
@@ -204,101 +203,34 @@ homekit_server_config_t config = {
     .password = "111-11-111"
 };
 
-int32_t ssi_handler(int32_t iIndex, char *pcInsert, int32_t iInsertLen)
-{
-    snprintf(pcInsert, iInsertLen, (switch_on.value.bool_value) ? "on" : "off");
-    /* Tell the server how many characters to insert */
-    return (strlen(pcInsert));
-}
-
-char *cgi_handler(int iIndex, int iNumParams, char *pcParam[], char *pcValue[])
-{
-    for (int i = 0; i < iNumParams; i++) {
-        if (strcmp(pcValue[i], "on") == 0) {
-            set_relay_value(true);
-        } else if (strcmp(pcValue[i], "off") == 0) {
-            set_relay_value(false);
-        } else if (strcmp(pcValue[i], "toggle") == 0) {
-            toggle_relay_value();
-        }
-    }
-    return "/index.ssi";
-}
-
-char *on_cgi_handler(int iIndex, int iNumParams, char *pcParam[], char *pcValue[])
-{
-    set_relay_value(true);
-    return "/ok.html";
-}
-
-char *off_cgi_handler(int iIndex, int iNumParams, char *pcParam[], char *pcValue[])
-{
-    set_relay_value(false);
-    return "/ok.html";
-}
-
-char *toggle_cgi_handler(int iIndex, int iNumParams, char *pcParam[], char *pcValue[])
-{
-    toggle_relay_value();
-    return "/ok.html";
-}
-
-char *state_cgi_handler(int iIndex, int iNumParams, char *pcParam[], char *pcValue[])
-{
-    return "/state.ssi";
-}
-
-void httpd_task(void *pvParameters)
-{
-    tCGI pCGIs[] = {
-        {"/", (tCGIHandler) cgi_handler},
-        {"/on", (tCGIHandler) on_cgi_handler},
-        {"/off", (tCGIHandler) off_cgi_handler},
-        {"/toggle", (tCGIHandler) toggle_cgi_handler},
-        {"/state", (tCGIHandler) state_cgi_handler}
-    };
-
-    const char *pcConfigSSITags[] = {
-        "state"     // SONOFF_STATE
-    };
-
-    /* register handlers and start the server */
-    http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
-    http_set_ssi_handler((tSSIHandler) ssi_handler, pcConfigSSITags, sizeof (pcConfigSSITags) / sizeof (pcConfigSSITags[0]));
-    //websocket_register_callbacks((tWsOpenHandler) websocket_open_cb, (tWsHandler) websocket_cb);
-    httpd_init();
-    for (;;);
-}
-
 void on_wifi_ready() {
     is_connected_to_wifi = true;
-    xTaskCreate(&httpd_task, "HTTP Daemon", 512, NULL, 1, NULL);
     homekit_server_init(&config);
 }
 
 void create_accessory_name() {
     uint8_t macaddr[6];
     sdk_wifi_get_macaddr(STATION_IF, macaddr);
-    
+
     int name_len = snprintf(NULL, 0, "Sonoff Switch-%02X%02X%02X",
                             macaddr[3], macaddr[4], macaddr[5]);
     char *name_value = malloc(name_len+1);
     snprintf(name_value, name_len+1, "Sonoff Switch-%02X%02X%02X",
              macaddr[3], macaddr[4], macaddr[5]);
-    
+
     name.value = HOMEKIT_STRING(name_value);
 }
 
 void create_serial_number() {
     uint8_t macaddr[6];
     sdk_wifi_get_macaddr(STATION_IF, macaddr);
-    
+
     int serial_len = snprintf(NULL, 0, "%02X%02X%02X-%02X%02X%02X",
                             macaddr[0], macaddr[1], macaddr[2], macaddr[3], macaddr[4], macaddr[5]);
     char *serial_value = malloc(serial_len+1);
     snprintf(serial_value, serial_len+1, "%02X%02X%02X-%02X%02X%02X",
                             macaddr[0], macaddr[1], macaddr[2], macaddr[3], macaddr[4], macaddr[5]);
-    
+
     serial.value = HOMEKIT_STRING(serial_value);
 }
 
@@ -307,7 +239,7 @@ void user_init(void) {
 
     create_accessory_name();
     create_serial_number();
-    
+
     wifi_config_init("sonoff-switch", NULL, on_wifi_ready);
     gpio_init();
 
