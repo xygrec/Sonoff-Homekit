@@ -1,3 +1,3 @@
 #pragma once
 
-const int POWER_ON_STATE = true;
+const int POWER_ON_STATE = false;

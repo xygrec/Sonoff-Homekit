@@ -176,15 +176,16 @@ void create_wifi_connection_watchdog() {
 }
 
 homekit_characteristic_t name = HOMEKIT_CHARACTERISTIC_(NAME, "Sonoff Switch");
+homekit_characteristic_t serial = HOMEKIT_CHARACTERISTIC_(SERIAL_NUMBER, "037A2B-ABF19D");
 
 homekit_accessory_t *accessories[] = {
     HOMEKIT_ACCESSORY(.id=1, .category=homekit_accessory_category_switch, .services=(homekit_service_t*[]){
         HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]){
             &name,
-            HOMEKIT_CHARACTERISTIC(MANUFACTURER, "Gruppio"),
-            HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "037A2BABF19D"),
+            HOMEKIT_CHARACTERISTIC(MANUFACTURER, "Sonoff"),
+            &serial,
             HOMEKIT_CHARACTERISTIC(MODEL, "Basic"),
-            HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "1.0.0"),
+            HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "1.0.1"),
             HOMEKIT_CHARACTERISTIC(IDENTIFY, switch_identify),
             NULL
         }),
@@ -288,10 +289,24 @@ void create_accessory_name() {
     name.value = HOMEKIT_STRING(name_value);
 }
 
+void create_serial_number() {
+    uint8_t macaddr[6];
+    sdk_wifi_get_macaddr(STATION_IF, macaddr);
+    
+    int serial_len = snprintf(NULL, 0, "%02X%02X%02X-%02X%02X%02X",
+                            macaddr[0], macaddr[1], macaddr[2], macaddr[3], macaddr[4], macaddr[5]);
+    char *serial_value = malloc(serial_len+1);
+    snprintf(serial_value, serial_len+1, "%02X%02X%02X-%02X%02X%02X",
+                            macaddr[0], macaddr[1], macaddr[2], macaddr[3], macaddr[4], macaddr[5]);
+    
+    serial.value = HOMEKIT_STRING(serial_value);
+}
+
 void user_init(void) {
     uart_set_baud(0, 115200);
 
     create_accessory_name();
+    create_serial_number();
     
     wifi_config_init("sonoff-switch", NULL, on_wifi_ready);
     gpio_init();
