@@ -11,4 +11,4 @@ esptool.py \
             -ff 40m \
             0x0 ./firmware/rboot.bin \
             0x1000 ./firmware/blank_config.bin \
-            0x2000 ./firmware/sonoff_andrew_v1.bin
+            0x2000 ./firmware/sonoff_andrew_v2.bin
